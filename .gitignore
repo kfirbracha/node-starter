@@ -26,7 +26,6 @@ node_modules/
 # dotenv environment variables file - comment on final dotenv
 .env
 .env.test
-
 # Gatsby files
 .cache/
 

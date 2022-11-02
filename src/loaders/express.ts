@@ -1,8 +1,11 @@
 import cors from 'cors';
 import bodyParser from 'body-parser';
 import routes from '../api/routes/index';
+import coockieParser from 'cookie-parser';
 import { BaseAppError } from '../utils/app-error';
 import express, { Express, Request, Response, NextFunction } from 'express';
+import { createCookie, getCookie } from '../utils/cookie-handler';
+import cookieParser from 'cookie-parser';
 export default (app: Express) => {
     process.on('uncaughtException', async (error) => {
         console.log(`ERROR ${error.message} SHOULD LOG INTO DB`);
@@ -12,17 +15,33 @@ export default (app: Express) => {
     });
 
     app.enable('trust proxy');
-    app.use(cors());
+    app.use(
+        cors({
+            origin: ['http://localhost:63342'],
+            credentials: true,
+        })
+    ); //enable cors
     app.use(bodyParser.urlencoded({ extended: false }));
-    app.use(bodyParser.json());
-    app.disable('x-powered-by');
-    app.disable('etag');
+    app.use(bodyParser.json()); //parse json middleware
+    app.disable('x-powered-by'); // disable server tech used
+    app.disable('etag'); // versions cache management
+    app.use(cookieParser());
+    // app.use(expressSession({}));
     app.use('/api', routes);
 
     app.get('/', (_req: Request, res: Response) => {
+        const cookie = createCookie(Date.now().toString());
+        res.cookie('kfirCookie', cookie.toString(), {
+            expires: new Date(Date.now() + 600000),
+            httpOnly: false,
+            maxAge: 900000,
+            sameSite: 'none', // for dev + not same origin
+            signed: false,
+            secure: true,
+        });
         return res.status(200).json({
             message: 'SUCCESS',
-            CODE: '00006',
+            CODE: '200',
         });
     });
 
@@ -62,10 +81,10 @@ export default (app: Express) => {
             next: NextFunction
         ) => {
             res.status(error.status || 500);
-            let resultCode = '00015';
+            let resultCode = '501';
             let level = 'External Error';
             if (error.status === 500) {
-                resultCode = '00013';
+                resultCode = '500';
                 level = 'Server Error';
             } else if (error.status === 404) {
                 resultCode = error.status.toString();
